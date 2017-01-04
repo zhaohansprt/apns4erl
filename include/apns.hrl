@@ -32,4 +32,5 @@
                    sound = none                 :: none | apns:apns_str(),
                    apns_extra = []              :: none | [{atom(), integer()|boolean()|string()}],
                    extra = []                   :: proplists:proplist(),
-                   priority = 10                :: integer()}).
+                   priority = 10                :: integer()},
+                   node).
