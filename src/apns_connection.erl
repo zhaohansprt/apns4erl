@@ -99,12 +99,18 @@ init(Name, Connection) ->
                        , info_logger_fun  =
                           Connection#apns_connection.info_logger_fun
                        }};
-          {error, Reason} -> {stop, Reason}
+          {error, Reason} -> 
+       io:format("****************  Line~p~n ",[?LINE]),
+          {stop, Reason}
         end;
-      {error, Reason} -> {stop, Reason}
+      {error, Reason} -> 
+             io:format("****************  Line~p~n ",[?LINE]),
+      {stop, Reason}
     end
   catch
-    _:{error, Reason2} -> {stop, Reason2}
+    _:{error, Reason2} -> 
+       io:format("****************  Line~p~n ",[?LINE]),
+    {stop, Reason2}
   end.
 
 %% @hidden
@@ -142,7 +148,9 @@ open_out(Connection) ->
     Connection#apns_connection.timeout
   ) of
     {ok, OutSocket} -> {ok, OutSocket};
-    {error, Reason} -> {error, Reason}
+    {error, Reason} -> 
+           io:format("****************  Line~p~n ",[?LINE]),
+    {error, Reason}
   end.
 
 %% @hidden
@@ -154,7 +162,9 @@ open_feedback(Connection) ->
     Connection#apns_connection.timeout
   ) of
     {ok, InSocket} -> {ok, InSocket};
-    {error, Reason} -> {error, Reason}
+    {error, Reason} -> 
+       io:format("****************  Line~p~n ",[?LINE]),
+    {error, Reason}
   end.
 
 %% @hidden
@@ -178,7 +188,9 @@ handle_cast(Msg, State=#state{ out_socket = undefined
       {ok, Socket} -> handle_cast(Msg,
                                   State#state{out_socket=Socket
                                              , out_expires = Timeout});
-      {error, Reason} -> {stop, Reason}
+      {error, Reason} -> 
+       io:format("****************  Line~p~n ",[?LINE]),
+      {stop, Reason}
     end
   catch
     _:{error, Reason2} -> {stop, Reason2}
@@ -202,6 +214,7 @@ handle_cast(Msg, State) when is_record(Msg, apns_msg) ->
           {noreply, State#state{out_expires = Timeout}};
       {error, Reason} ->
         apns_queue:fail(State#state.queue, Msg#apns_msg.id),
+               io:format("****************  Line~p~n ",[?LINE]),
         {stop, {error, Reason}, State}
     end
   end;
@@ -299,7 +312,9 @@ handle_info(reconnect, State = #state{connection = Connection
   InfoLoggerFun("[ ~p ] Reconnecting the Feedback server...", [Name]),
   case open_feedback(Connection) of
     {ok, InSocket} -> {noreply, State#state{in_socket = InSocket}};
-    {error, Reason} -> {stop, {in_closed, Reason}, State}
+    {error, Reason} ->
+       io:format("****************  Line~p~n ",[?LINE]),
+     {stop, {in_closed, Reason}, State}
   end;
 
 handle_info({ssl_closed, SslSocket}
