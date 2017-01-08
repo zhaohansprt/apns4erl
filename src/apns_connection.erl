@@ -99,9 +99,9 @@ init(Name, Connection) ->
                        , info_logger_fun  =
                           Connection#apns_connection.info_logger_fun
                        }};
-      {error, Reason}=Error -> 
+      {error, Reason} -> 
              io:format("****************  Line~p~n ",[?LINE]),
-              {stop, Error}
+              {stop,  {error, Reason}}
     end.
 
 %% @hidden
@@ -169,10 +169,10 @@ handle_cast(Msg, State=#state{ out_socket = undefined
                                              , out_expires = Timeout});
       {error, Reason} -> 
        io:format("****************  Line~p~n ",[?LINE]),
-      {stop, Reason}
+      {stop,  {error, Reason}}
     end
   catch
-    _:{error, Reason2} -> {stop, Reason2}
+    _:{error, Reason2} -> {stop, {error,Reason2}}
   end;
 
 handle_cast(Msg, State) when is_record(Msg, apns_msg) ->
