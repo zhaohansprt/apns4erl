@@ -353,12 +353,6 @@ hex_to_bin(<<X, Y, Rest/binary>>, Acc) ->
   {ok, [V], []} = io_lib:fread("~16u", [X, Y]),
   hex_to_bin(Rest, <<Acc/binary, V>>).
 
-bin_to_hexstr(Binary) ->
-    L = size(Binary),
-    Bits = L * 8,
-    <<X:Bits/big-unsigned-integer>> = Binary,
-    F = lists:flatten(io_lib:format("~~~B.16.0B", [L * 2])),
-    lists:flatten(io_lib:format(F, [X])).
 
 parse_status(0) -> no_errors;
 parse_status(1) -> processing_error;
