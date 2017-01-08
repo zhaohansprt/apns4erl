@@ -86,10 +86,8 @@ init(Name, Connection) ->
     {ok, QID} = apns_queue:start_link(),
     Timeout = epoch() + Connection#apns_connection.expires_conn,
     case open_out(Connection) of
-      {ok, OutSocket} -> case open_feedback(Connection) of
-          {ok, InSocket} ->
+      {ok, OutSocket} -> 
             {ok, #state{ out_socket = OutSocket
-                       , in_socket  = InSocket
                        , connection = Connection
                        , queue      = QID
                        , out_expires = Timeout
@@ -99,13 +97,9 @@ init(Name, Connection) ->
                        , info_logger_fun  =
                           Connection#apns_connection.info_logger_fun
                        }};
-          {error, Reason} -> 
-       io:format("****************  Line~p~n ",[?LINE]),
-          {stop, Reason}
-        end;
       {error, Reason} -> 
              io:format("****************  Line~p~n ",[?LINE]),
-      {stop, Reason}
+              {stop, Reason}
     end
   catch
     _:{error, Reason2} -> 
@@ -153,19 +147,6 @@ open_out(Connection) ->
     {error, Reason}
   end.
 
-%% @hidden
-open_feedback(Connection) ->
-  case ssl:connect(
-    Connection#apns_connection.feedback_host,
-    Connection#apns_connection.feedback_port,
-    ssl_opts(Connection),
-    Connection#apns_connection.timeout
-  ) of
-    {ok, InSocket} -> {ok, InSocket};
-    {error, Reason} -> 
-       io:format("****************  Line~p~n ",[?LINE]),
-    {error, Reason}
-  end.
 
 %% @hidden
 -spec handle_call(X, reference(), state()) ->
@@ -261,60 +242,6 @@ handle_info( {ssl, SslSocket, Data}
       end;
     NextBuffer -> %% We need to wait for the rest of the message
       {noreply, State#state{out_buffer = NextBuffer}}
-  end;
-handle_info( {ssl, SslSocket, Data}
-           , State = #state{ in_socket  = SslSocket
-                           , connection =
-                              #apns_connection{feedback_fun = Feedback}
-                           , in_buffer  = CurrentBuffer
-                           , error_logger_fun = ErrorLoggerFun
-                           , name = Name
-                           }) ->
-  case <<CurrentBuffer/binary, Data/binary>> of
-    <<TimeT:4/big-unsigned-integer-unit:8,
-      Length:2/big-unsigned-integer-unit:8,
-      Token:Length/binary,
-      Rest/binary>> ->
-      try call(Feedback, [{apns:timestamp(TimeT), bin_to_hexstr(Token)}])
-      catch
-        _:Error ->
-          ErrorLoggerFun(
-            "[ ~p ] Error trying to inform feedback token ~p: ~p~n~p",
-            [Name, Token, Error, erlang:get_stacktrace()])
-      end,
-      case erlang:size(Rest) of
-        0 -> {noreply, State#state{in_buffer = <<>>}}; %% It was a whole package
-        _ -> handle_info({ssl, SslSocket, Rest}, State#state{in_buffer = <<>>})
-      end;
-    NextBuffer -> %% We need to wait for the rest of the message
-      {noreply, State#state{in_buffer = NextBuffer}}
-  end;
-
-handle_info({ssl_closed, SslSocket}
-           , State = #state{in_socket = SslSocket
-                           , connection= Connection
-                           , info_logger_fun = InfoLoggerFun
-                           , name = Name
-                           }) ->
-  InfoLoggerFun(
-    "[ ~p ] Feedback server disconnected. "
-    "Waiting ~p millis to connect again...",
-    [Name, Connection#apns_connection.feedback_timeout]),
-  _Timer =
-    erlang:send_after(
-      Connection#apns_connection.feedback_timeout, self(), reconnect),
-  {noreply, State#state{in_socket = undefined}};
-
-handle_info(reconnect, State = #state{connection = Connection
-                                     , info_logger_fun = InfoLoggerFun
-                                     , name = Name
-                                     }) ->
-  InfoLoggerFun("[ ~p ] Reconnecting the Feedback server...", [Name]),
-  case open_feedback(Connection) of
-    {ok, InSocket} -> {noreply, State#state{in_socket = InSocket}};
-    {error, Reason} ->
-       io:format("****************  Line~p~n ",[?LINE]),
-     {stop, {in_closed, Reason}, State}
   end;
 
 handle_info({ssl_closed, SslSocket}
