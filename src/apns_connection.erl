@@ -82,7 +82,6 @@ init(Connection) ->
 %% @hidden
 -spec init(atom(), apns:connection()) -> {ok, state() | {stop, term()}}.
 init(Name, Connection) ->
-  try
     {ok, QID} = apns_queue:start_link(),
     Timeout = epoch() + Connection#apns_connection.expires_conn,
     case open_out(Connection) of
@@ -100,15 +99,10 @@ init(Name, Connection) ->
                        , info_logger_fun  =
                           Connection#apns_connection.info_logger_fun
                        }};
-      {error, Reason} -> 
+      {error, Reason}=Error -> 
              io:format("****************  Line~p~n ",[?LINE]),
-              {stop, Reason}
-    end
-  catch
-    _:{error, Reason2} -> 
-       io:format("****************  Line~p~n ",[?LINE]),
-    {stop, Reason2}
-  end.
+              {stop, Error}
+    end.
 
 %% @hidden
 ssl_opts(Connection) ->
