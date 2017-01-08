@@ -87,6 +87,9 @@ init(Name, Connection) ->
     Timeout = epoch() + Connection#apns_connection.expires_conn,
     case open_out(Connection) of
       {ok, OutSocket} -> 
+           #apns_connection{info_logger_fun=InfoLoggerFun}=Connection,
+            InfoLoggerFun("[ ~p ] Reconnected to APNS...", [Name]),
+
             {ok, #state{ out_socket = OutSocket
                        , connection = Connection
                        , queue      = QID
@@ -141,10 +144,11 @@ open_out(Connection) ->
     ssl_opts(Connection),
     Connection#apns_connection.timeout
   ) of
-    {ok, OutSocket} -> {ok, OutSocket};
+    {ok, OutSocket} -> 
+                {ok, OutSocket};
     {error, Reason} -> 
            io:format("****************  Line~p~n ",[?LINE]),
-    {error, Reason}
+                 {error, Reason}
   end.
 
 
